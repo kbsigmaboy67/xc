@@ -27,12 +27,7 @@
 // ============================================================
 
 const DEFAULT_TOKENS = [
-  // Paste your base64-encoded token(s) here, e.g.:
-  // "Z2hwX3h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4",
-  // "Z2l0aHViX3BhdF94eHh4eHh4eHh4eHh4eA==",
-  // xcyber_ tokens can also go here WITHOUT btoa:
-  // "xcyber_ab3cd:ef$gh/ij",
-  "Z2l0aHViX3BhdF8xMUJVQUtHN0kwdk9uaTFXREZQM28zX01TWDFJaHNrblAzTDhwRE9waU5jMWRWUG8xaHlGbUs3clI3bFZHallPdHZJRUpGVkxCSFlha3ZGZXFT"
+  "Z2l0aHViX3BhdF8xMUJVQUtHN0kwdnRvaVd4N1RKVjA0X3lDTHpJWTl5SVZwZXdUVjdqNmdTNlR4OVlEbWJDOHZJZ3lzSXNtWWpCUmVGVzRZNlBBUkdoMFE1OGRL"
 ];
 
 // ── AUTO-LOAD DEFAULT TOKENS ON STARTUP ──
