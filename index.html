@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XCYBER — GitHub IDE</title>
+<link rel="stylesheet" href="https://kbsigmaboy67.github.io/xc/xcyber.css">
+<!-- Monaco Editor -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css">
+<!-- marked.js for MD rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<!-- DOMPurify for safe HTML rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<!-- JSZip for import/export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ═══════════════════════ TOPBAR ═══════════════════════ -->
+  <div id="topbar">
+    <div class="logo">XC<span>YBER</span></div>
+    <div class="topbar-tabs" id="topbar-tabs">
+      <div class="topbar-tab active" data-panel="editor-panel">⌨ EDITOR</div>
+      <div class="topbar-tab" data-panel="image-panel">🖼 IMAGE</div>
+      <div class="topbar-tab" data-panel="audio-panel">🎵 AUDIO</div>
+      <div class="topbar-tab" data-panel="video-panel">🎞 VIDEO/GIF</div>
+      <div class="topbar-tab" data-panel="visual-panel">🧱 VISUAL HTML</div>
+      <div class="topbar-tab" data-panel="deploy-panel">🚀 DEPLOY</div>
+      <div class="topbar-tab" data-panel="terminal-panel">⬛ TERMINAL</div>
+      <div class="topbar-tab" data-panel="search-panel">🔍 SEARCH</div>
+      <div class="topbar-tab" data-panel="token-panel-main">🔑 TOKENS</div>
+      <div class="topbar-tab" data-panel="actions-panel">⚙ ACTIONS</div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn sm" onclick="XC.openModal('new-file-modal')">+ FILE</button>
+      <button class="btn sm" onclick="XC.openModal('new-repo-modal')">+ REPO</button>
+      <button class="btn sm primary" onclick="XC.commitPush()">⬆ PUSH</button>
+      <button class="btn sm" onclick="XC.openModal('settings-modal')">⚙</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ SIDEBAR ═══════════════════════ -->
+  <div id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-header">REPOSITORIES</div>
+      <div id="repo-list-sidebar" class="flex flex-col gap-4 p-8"></div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-header">FILES</div>
+      <div id="file-tree" class="file-tree"></div>
+    </div>
+    <div class="sidebar-section mt-8">
+      <div class="sidebar-header">BRANCH</div>
+      <div class="p-8">
+        <select class="inp full" id="branch-select" onchange="XC.switchBranch(this.value)">
+          <option>main</option>
+        </select>
+        <div class="flex gap-4 mt-8">
+          <button class="btn sm full" onclick="XC.openModal('new-branch-modal')">+ BRANCH</button>
+          <button class="btn sm" onclick="XC.pullBranch()">↓ PULL</button>
+        </div>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-header">GIT STATUS</div>
+      <div id="git-status-sidebar" class="p-8 mono text-muted" style="font-size:11px;">No changes</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ MAIN PANELS ═══════════════════════ -->
+  <div id="main">
+
+    <!-- ─── EDITOR PANEL ─── -->
+    <div id="editor-panel" class="panel active">
+      <div class="editor-tabs" id="editor-tabs">
+        <div class="editor-tab active" data-file="welcome">welcome.md <span class="close-tab" onclick="XC.closeTab('welcome',event)">✕</span></div>
+      </div>
+      <div class="panel-toolbar">
+        <span class="panel-title">CODE EDITOR</span>
+        <select class="inp sm" id="editor-lang-select" onchange="XC.setEditorLanguage(this.value)" style="width:110px"></select>
+        <button class="btn sm" onclick="XC.editorAction('format')">FORMAT</button>
+        <button class="btn sm" onclick="XC.editorAction('copy')">COPY</button>
+        <button class="btn sm" onclick="XC.saveCurrentFile()">💾 SAVE</button>
+        <button class="btn sm" onclick="XC.exportCurrentFile()">⬇ EXPORT</button>
+        <button class="btn sm" onclick="XC.importFile()">⬆ IMPORT</button>
+        <button class="btn sm" onclick="XC.previewCurrentFile()">👁 PREVIEW</button>
+        <button class="btn sm danger" onclick="XC.deleteCurrentFile()">🗑 DELETE</button>
+        <span id="file-size-label" class="text-muted mono" style="font-size:10px;margin-left:auto"></span>
+      </div>
+      <div id="editor-wrap">
+        <div id="monaco-editor-container"></div>
+        <div id="preview-overlay" class="hidden" style="position:absolute;inset:0;background:var(--bg3);overflow:auto;z-index:10;">
+          <div class="panel-toolbar">
+            <span class="panel-title">PREVIEW</span>
+            <button class="btn sm" onclick="XC.closePreview()">✕ CLOSE</button>
+          </div>
+          <div id="preview-content" class="md-preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── IMAGE EDITOR PANEL ─── -->
+    <div id="image-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">IMAGE EDITOR</span>
+        <button class="btn sm" onclick="IMG.importImage()">⬆ IMPORT</button>
+        <button class="btn sm" onclick="IMG.exportImage('png')">⬇ PNG</button>
+        <button class="btn sm" onclick="IMG.exportImage('jpeg')">⬇ JPEG</button>
+        <button class="btn sm" onclick="IMG.exportImage('webp')">⬇ WEBP</button>
+        <button class="btn sm" onclick="IMG.copyToClipboard()">COPY</button>
+        <button class="btn sm" onclick="IMG.resetCanvas()">RESET</button>
+        <span id="img-info" class="text-muted mono" style="font-size:10px;margin-left:auto"></span>
+      </div>
+      <div id="image-editor-container">
+        <div class="image-tools">
+          <label class="lbl">TOOL:</label>
+          <button class="btn sm" onclick="IMG.setTool('select')">▢ SELECT</button>
+          <button class="btn sm" onclick="IMG.setTool('crop')">✂ CROP</button>
+          <button class="btn sm" onclick="IMG.setTool('draw')">✏ DRAW</button>
+          <button class="btn sm" onclick="IMG.setTool('fill')">🪣 FILL</button>
+          <button class="btn sm" onclick="IMG.setTool('text')">T TEXT</button>
+          <label class="lbl">FILTER:</label>
+          <button class="btn sm" onclick="IMG.applyFilter('grayscale')">GRAY</button>
+          <button class="btn sm" onclick="IMG.applyFilter('invert')">INVERT</button>
+          <button class="btn sm" onclick="IMG.applyFilter('blur')">BLUR</button>
+          <button class="btn sm" onclick="IMG.applyFilter('sharpen')">SHARP</button>
+          <button class="btn sm" onclick="IMG.applyFilter('sepia')">SEPIA</button>
+          <label class="lbl">TRANSFORM:</label>
+          <button class="btn sm" onclick="IMG.rotate(90)">↻90</button>
+          <button class="btn sm" onclick="IMG.rotate(-90)">↺90</button>
+          <button class="btn sm" onclick="IMG.flip('h')">⇌H</button>
+          <button class="btn sm" onclick="IMG.flip('v')">⇅V</button>
+          <label class="lbl">COLOR:</label>
+          <input type="color" id="draw-color" value="#00aaff" class="inp" style="width:36px;height:26px;padding:1px">
+          <input type="range" id="draw-size" min="1" max="50" value="4" style="width:80px">
+          <label class="lbl">BRIGHTNESS:</label>
+          <input type="range" id="img-brightness" min="-100" max="100" value="0" oninput="IMG.adjustBrightness(this.value)" style="width:80px">
+          <label class="lbl">CONTRAST:</label>
+          <input type="range" id="img-contrast" min="-100" max="100" value="0" oninput="IMG.adjustContrast(this.value)" style="width:80px">
+        </div>
+        <div class="image-canvas-wrap">
+          <canvas id="image-canvas" width="800" height="600"></canvas>
+          <div id="img-drop-hint" style="position:absolute;color:var(--text3);font-family:var(--display);font-size:13px;letter-spacing:2px;pointer-events:none;">
+            DROP IMAGE OR IMPORT
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── AUDIO EDITOR PANEL ─── -->
+    <div id="audio-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">AUDIO EDITOR</span>
+        <button class="btn sm" onclick="AUD.importAudio()">⬆ IMPORT</button>
+        <button class="btn sm" onclick="AUD.exportAudio('wav')">⬇ WAV</button>
+        <button class="btn sm" onclick="AUD.exportAudio('mp3')">⬇ MP3</button>
+        <button class="btn sm" onclick="AUD.copyWaveform()">COPY PNG</button>
+      </div>
+      <div id="audio-editor-container">
+        <div class="waveform-canvas-wrap">
+          <canvas id="waveform-canvas"></canvas>
+          <div id="audio-drop-hint" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text3);font-family:var(--display);font-size:12px;letter-spacing:2px;">DROP AUDIO FILE OR IMPORT</div>
+        </div>
+        <div class="audio-controls">
+          <button class="btn" onclick="AUD.play()">▶ PLAY</button>
+          <button class="btn" onclick="AUD.pause()">⏸ PAUSE</button>
+          <button class="btn" onclick="AUD.stop()">⏹ STOP</button>
+          <div class="time-display" id="audio-time">0:00 / 0:00</div>
+          <label class="lbl">VOLUME:</label>
+          <input type="range" id="audio-volume" min="0" max="100" value="80" oninput="AUD.setVolume(this.value)" style="width:80px">
+          <label class="lbl">SPEED:</label>
+          <input type="range" id="audio-speed" min="25" max="400" value="100" oninput="AUD.setSpeed(this.value)" style="width:80px">
+          <span id="audio-speed-label" class="text-muted mono" style="font-size:11px">1.0x</span>
+          <label class="lbl">TRIM START:</label>
+          <input type="number" id="trim-start" class="inp" style="width:70px" value="0" min="0" step="0.1">
+          <label class="lbl">TRIM END:</label>
+          <input type="number" id="trim-end" class="inp" style="width:70px" value="0" min="0" step="0.1">
+          <button class="btn sm" onclick="AUD.trim()">✂ TRIM</button>
+          <label class="lbl">FADE IN:</label>
+          <input type="number" id="fade-in" class="inp" style="width:60px" value="0" min="0" step="0.1">
+          <label class="lbl">FADE OUT:</label>
+          <input type="number" id="fade-out" class="inp" style="width:60px" value="0" min="0" step="0.1">
+          <button class="btn sm" onclick="AUD.applyFades()">APPLY</button>
+        </div>
+        <div id="audio-info" class="border-box p-8 mono text-muted" style="font-size:11px;">No audio loaded</div>
+      </div>
+    </div>
+
+    <!-- ─── VIDEO/GIF EDITOR PANEL ─── -->
+    <div id="video-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">VIDEO / GIF EDITOR</span>
+        <button class="btn sm" onclick="VID.importMedia()">⬆ IMPORT</button>
+        <button class="btn sm" onclick="VID.exportGIF()">⬇ GIF</button>
+        <button class="btn sm" onclick="VID.exportWebM()">⬇ WEBM</button>
+        <button class="btn sm" onclick="VID.captureFrame()">📷 FRAME</button>
+        <button class="btn sm" onclick="VID.copyFrame()">COPY FRAME</button>
+      </div>
+      <div id="video-editor-container">
+        <div class="video-preview-wrap" id="video-preview-wrap">
+          <div style="color:var(--text3);font-family:var(--display);font-size:12px;letter-spacing:2px;">DROP VIDEO/GIF OR IMPORT</div>
+        </div>
+        <div class="panel-toolbar">
+          <button class="btn" onclick="VID.play()">▶ PLAY</button>
+          <button class="btn" onclick="VID.pause()">⏸ PAUSE</button>
+          <button class="btn" onclick="VID.stop()">⏹ STOP</button>
+          <div class="time-display" id="video-time">0:00 / 0:00</div>
+          <label class="lbl">VOLUME:</label>
+          <input type="range" id="video-volume" min="0" max="100" value="80" oninput="VID.setVolume(this.value)" style="width:80px">
+          <label class="lbl">SPEED:</label>
+          <select class="inp sm" id="video-speed" onchange="VID.setSpeed(this.value)">
+            <option value="0.25">0.25x</option><option value="0.5">0.5x</option>
+            <option value="1" selected>1x</option><option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+          <label class="lbl">FILTER:</label>
+          <select class="inp sm" id="video-filter" onchange="VID.applyFilter(this.value)">
+            <option value="">None</option>
+            <option value="grayscale(1)">Grayscale</option>
+            <option value="sepia(1)">Sepia</option>
+            <option value="invert(1)">Invert</option>
+            <option value="hue-rotate(180deg)">Hue Shift</option>
+            <option value="contrast(2)">High Contrast</option>
+          </select>
+          <label class="lbl">GIF FPS:</label>
+          <input type="number" id="gif-fps" class="inp" style="width:50px" value="10" min="1" max="30">
+          <label class="lbl">GIF START:</label>
+          <input type="number" id="gif-start" class="inp" style="width:60px" value="0" min="0" step="0.1">
+          <label class="lbl">GIF END:</label>
+          <input type="number" id="gif-end" class="inp" style="width:60px" value="5" min="0" step="0.1">
+        </div>
+        <div class="timeline-wrap">
+          <canvas id="timeline-canvas"></canvas>
+        </div>
+        <div id="video-info" class="border-box p-8 mono text-muted" style="font-size:11px;">No media loaded</div>
+      </div>
+    </div>
+
+    <!-- ─── VISUAL HTML EDITOR PANEL ─── -->
+    <div id="visual-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">VISUAL HTML EDITOR</span>
+        <button class="btn sm" onclick="VE.addElement()">+ ELEMENT</button>
+        <button class="btn sm" onclick="VE.deleteSelected()">🗑 DELETE</button>
+        <button class="btn sm" onclick="VE.duplicateSelected()">⧉ DUPLICATE</button>
+        <button class="btn sm" onclick="VE.exportHTML()">⬇ HTML</button>
+        <button class="btn sm" onclick="VE.importHTML()">⬆ IMPORT</button>
+        <button class="btn sm" onclick="VE.copyHTML()">COPY HTML</button>
+        <button class="btn sm" onclick="VE.clearCanvas()">CLEAR</button>
+        <button class="btn sm primary" onclick="VE.sendToEditor()">→ CODE EDITOR</button>
+      </div>
+      <div id="visual-editor-container">
+        <div id="ve-canvas" class="visual-canvas-area"></div>
+        <div class="ve-sidebar">
+          <div class="sidebar-header" style="padding:0 0 6px">ELEMENT PROPS</div>
+          <div id="ve-no-selection" class="text-muted" style="font-size:11px;">Select an element</div>
+          <div id="ve-props" class="hidden flex flex-col gap-8">
+            <div class="ve-prop"><label>TYPE</label>
+              <select class="inp full" id="ve-type" onchange="VE.updateProp('type',this.value)">
+                <option>div</option><option>p</option><option>h1</option><option>h2</option><option>h3</option>
+                <option>span</option><option>button</option><option>input</option><option>img</option>
+                <option>a</option><option>section</option><option>nav</option><option>header</option>
+                <option>footer</option><option>ul</option><option>li</option><option>table</option>
+              </select></div>
+            <div class="ve-prop"><label>X (px)</label><input type="number" class="inp full" id="ve-x" oninput="VE.updateProp('x',this.value)"></div>
+            <div class="ve-prop"><label>Y (px)</label><input type="number" class="inp full" id="ve-y" oninput="VE.updateProp('y',this.value)"></div>
+            <div class="ve-prop"><label>WIDTH</label><input type="number" class="inp full" id="ve-w" oninput="VE.updateProp('w',this.value)"></div>
+            <div class="ve-prop"><label>HEIGHT</label><input type="number" class="inp full" id="ve-h" oninput="VE.updateProp('h',this.value)"></div>
+            <div class="ve-prop"><label>Z-INDEX</label><input type="number" class="inp full" id="ve-z" oninput="VE.updateProp('z',this.value)"></div>
+            <div class="ve-prop"><label>CONTENT</label><input type="text" class="inp full" id="ve-content" oninput="VE.updateProp('content',this.value)"></div>
+            <div class="ve-prop"><label>CLASS</label><input type="text" class="inp full" id="ve-class" oninput="VE.updateProp('class',this.value)"></div>
+            <div class="ve-prop"><label>ID</label><input type="text" class="inp full" id="ve-id" oninput="VE.updateProp('id',this.value)"></div>
+            <div class="ve-prop"><label>BG COLOR</label><input type="color" class="inp full" id="ve-bg" value="#0a1220" oninput="VE.updateProp('bg',this.value)"></div>
+            <div class="ve-prop"><label>TEXT COLOR</label><input type="color" class="inp full" id="ve-color" value="#c8e0ff" oninput="VE.updateProp('color',this.value)"></div>
+            <div class="ve-prop"><label>FONT SIZE</label><input type="number" class="inp full" id="ve-font" value="14" oninput="VE.updateProp('fontSize',this.value)"></div>
+            <div class="ve-prop"><label>BORDER</label><input type="text" class="inp full" id="ve-border" placeholder="1px solid #0af" oninput="VE.updateProp('border',this.value)"></div>
+            <div class="ve-prop"><label>EXTRA ATTRS (JSON)</label><textarea class="inp full" id="ve-attrs" rows="3" oninput="VE.updateProp('attrs',this.value)" placeholder='{"href":"#","target":"_blank"}'></textarea></div>
+            <button class="btn full" onclick="VE.bringForward()">▲ BRING FORWARD</button>
+            <button class="btn full" onclick="VE.sendBackward()">▼ SEND BACKWARD</button>
+            <button class="btn full" onclick="VE.bringToFront()">⬆ FRONT</button>
+            <button class="btn full" onclick="VE.sendToBack()">⬇ BACK</button>
+          </div>
+          <div class="sidebar-header" style="padding:8px 0 6px;margin-top:8px;">ELEMENT LAYERS</div>
+          <div id="ve-layers" class="flex flex-col gap-4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── DEPLOY PANEL ─── -->
+    <div id="deploy-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">DEPLOYMENTS</span>
+        <button class="btn sm" onclick="DEP.refresh()">↻ REFRESH</button>
+        <button class="btn sm primary" onclick="DEP.deployGHPages()">⚡ DEPLOY PAGES</button>
+        <button class="btn sm" onclick="DEP.openVercel()">▲ VERCEL</button>
+        <button class="btn sm" onclick="DEP.openNetlify()">◆ NETLIFY</button>
+      </div>
+      <div class="panel-body">
+        <div class="deploy-grid" id="deploy-grid">
+          <div class="deploy-card">
+            <div class="text-muted" style="font-size:12px;">Connect a token to view deployments</div>
+          </div>
+        </div>
+        <div style="padding:16px;">
+          <div class="sidebar-header">GITHUB PAGES SETTINGS</div>
+          <div class="flex gap-8 mt-8 flex-wrap">
+            <div class="flex flex-col gap-4">
+              <label class="lbl">BRANCH</label>
+              <select class="inp" id="pages-branch">
+                <option>gh-pages</option><option>main</option><option>docs</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-4">
+              <label class="lbl">FOLDER</label>
+              <select class="inp" id="pages-folder">
+                <option>/ (root)</option><option>/docs</option>
+              </select>
+            </div>
+            <button class="btn primary" onclick="DEP.savePages()" style="align-self:flex-end">SAVE PAGES CONFIG</button>
+            <button class="btn" onclick="DEP.disablePages()" style="align-self:flex-end">DISABLE PAGES</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TERMINAL PANEL ─── -->
+    <div id="terminal-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">GIT TERMINAL</span>
+        <button class="btn sm" onclick="TERM.clear()">CLEAR</button>
+        <button class="btn sm" onclick="TERM.copyAll()">COPY ALL</button>
+        <button class="btn sm" onclick="TERM.help()">HELP</button>
+      </div>
+      <div id="terminal-container">
+        <div class="terminal-output" id="terminal-output"></div>
+        <div class="terminal-input-row">
+          <span class="terminal-prompt" id="terminal-prompt">xcyber@git:~$</span>
+          <input type="text" id="terminal-input" placeholder="Enter git command..." autocomplete="off" spellcheck="false">
+          <button class="btn sm" onclick="TERM.run()">RUN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── SEARCH PANEL ─── -->
+    <div id="search-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">FILE SEARCH</span>
+      </div>
+      <div class="search-row">
+        <input class="inp" id="search-input" placeholder="Search in files..." oninput="SRCH.search(this.value)">
+        <select class="inp sm" id="search-type" style="width:100px">
+          <option value="content">Content</option>
+          <option value="filename">Filename</option>
+          <option value="regex">Regex</option>
+        </select>
+        <label class="lbl" style="white-space:nowrap">Case sensitive</label>
+        <input type="checkbox" id="search-case">
+        <button class="btn sm" onclick="SRCH.search(document.getElementById('search-input').value)">SEARCH</button>
+        <button class="btn sm" onclick="SRCH.replaceAll()">REPLACE ALL</button>
+        <input class="inp" id="replace-input" placeholder="Replace with..." style="width:140px">
+      </div>
+      <div class="search-results" id="search-results"></div>
+    </div>
+
+    <!-- ─── TOKEN PANEL ─── -->
+    <div id="token-panel-main" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">TOKEN MANAGER</span>
+      </div>
+      <div class="panel-body p-16">
+        <div id="token-panel" class="flex flex-col gap-12">
+
+          <!-- Pre-loaded base64 token slot -->
+          <div class="token-box">
+            <div class="flex gap-8" style="align-items:center;margin-bottom:10px;">
+              <span class="panel-title">PRE-LOADED TOKENS</span>
+              <span class="token-badge xcyber">⚡ XCYBER ENCODED</span>
+            </div>
+            <div class="flex flex-col gap-4">
+              <label class="lbl">BASE64-ENCODED TOKEN (for multiple repos — paste here):</label>
+              <div class="flex gap-6">
+                <textarea class="inp full" id="b64-token-input" rows="3" placeholder="Paste base64-encoded token(s) here. One per line for multiple."></textarea>
+                <button class="btn primary" onclick="TOK.loadB64Tokens()" style="align-self:flex-end">LOAD</button>
+              </div>
+              <div class="text-muted mono" style="font-size:10px;">Tokens decoded client-side only, never transmitted except to api.github.com</div>
+            </div>
+          </div>
+
+          <!-- Manual token entry -->
+          <div class="token-box">
+            <div class="flex gap-8" style="align-items:center;margin-bottom:10px;">
+              <span class="panel-title">ADD TOKEN</span>
+            </div>
+            <div class="flex flex-col gap-8">
+              <div>
+                <label class="lbl">GITHUB TOKEN (classic or fine-grained or xcyber-encoded):</label>
+                <div class="flex gap-6 mt-8">
+                  <input class="inp full" id="manual-token-input" type="password" placeholder="ghp_... or github_pat_... or xcyber_..." oninput="TOK.detectTokenType(this.value)">
+                  <button class="btn primary" onclick="TOK.addManualToken()">ADD</button>
+                  <button class="btn sm" onclick="TOK.toggleShow('manual-token-input')">SHOW</button>
+                </div>
+              </div>
+              <div id="token-type-badge" class="flex gap-6 align-center"></div>
+              <div>
+                <label class="lbl">XCYBER-ENCODED FORMAT:</label>
+                <div class="border-box p-8 mono text-muted" style="font-size:11px;line-height:1.7;">
+                  xcyber_(token after 'github_pat_' with substitutions)<br>
+                  Substitutions: 1→: , 5→/ , 2→$ , A→@ , _→- , etc.<br>
+                  Example: <span class="text-accent3">xcyber_ab3cd:ef$gh/ij</span>
+                </div>
+              </div>
+              <div>
+                <label class="lbl">XCYBER-ENCODE YOUR TOKEN:</label>
+                <div class="flex gap-6">
+                  <input class="inp full" id="encode-input" type="password" placeholder="Paste token to encode to xcyber format">
+                  <button class="btn sm" onclick="TOK.encodeToken()">ENCODE</button>
+                  <button class="btn sm" onclick="TOK.copyEncoded()">COPY</button>
+                </div>
+                <div id="encoded-output" class="mono p-8 text-accent" style="font-size:11px;word-break:break-all;margin-top:4px;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active tokens -->
+          <div class="token-box">
+            <div class="panel-title" style="margin-bottom:10px;">ACTIVE TOKENS</div>
+            <div id="active-tokens-list" class="flex flex-col gap-6">
+              <div class="text-muted" style="font-size:12px;">No tokens loaded</div>
+            </div>
+          </div>
+
+          <!-- Token permissions display -->
+          <div class="token-box">
+            <div class="panel-title" style="margin-bottom:10px;">TOKEN INFO & PERMISSIONS</div>
+            <div id="token-info-display" class="flex flex-col gap-6">
+              <div class="text-muted" style="font-size:12px;">Load a token to see permissions</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ACTIONS PANEL ─── -->
+    <div id="actions-panel" class="panel">
+      <div class="panel-toolbar">
+        <span class="panel-title">GITHUB ACTIONS & CI/CD</span>
+        <button class="btn sm" onclick="ACT.refresh()">↻ REFRESH</button>
+        <button class="btn sm" onclick="ACT.newWorkflow()">+ WORKFLOW</button>
+        <button class="btn sm" onclick="ACT.exportWorkflows()">⬇ EXPORT</button>
+      </div>
+      <div class="panel-body p-12">
+        <div id="actions-list"></div>
+        <div class="sidebar-header" style="margin-top:16px;">RUN LOG</div>
+        <div class="run-log" id="run-log"><span class="t-info">Select a workflow run to view logs</span></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+</div><!-- /app -->
+
+<!-- ═══════════════════════ STATUS BAR ═══════════════════════ -->
+<div id="statusbar" style="grid-column:1/-1">
+  <div class="status-item active">⬡ XCYBER IDE</div>
+  <div class="status-sep">│</div>
+  <div class="status-item" id="status-repo">No repo</div>
+  <div class="status-sep">│</div>
+  <div class="status-item" id="status-branch">No branch</div>
+  <div class="status-sep">│</div>
+  <div class="status-item" id="status-file">No file</div>
+  <div class="status-sep">│</div>
+  <div class="status-item" id="status-cursor">Ln 1, Col 1</div>
+  <div class="status-sep">│</div>
+  <div class="status-item" id="status-token">No token</div>
+  <div class="status-sep">│</div>
+  <div class="status-item" id="status-net">●</div>
+</div>
+
+<!-- ═══════════════════════ MODALS ═══════════════════════ -->
+
+<!-- New File Modal -->
+<div class="modal-overlay" id="new-file-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">NEW FILE</span><button class="btn sm" onclick="XC.closeModal('new-file-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="ve-prop"><label class="lbl">FILE NAME</label><input class="inp full" id="new-file-name" placeholder="index.html"></div>
+      <div class="ve-prop"><label class="lbl">TEMPLATE</label>
+        <select class="inp full" id="new-file-template">
+          <option value="blank">Blank</option>
+          <option value="html">HTML5 Template</option>
+          <option value="css">CSS Template</option>
+          <option value="js">JS Module</option>
+          <option value="md">Markdown</option>
+          <option value="json">JSON</option>
+          <option value="gitignore">.gitignore</option>
+          <option value="workflow">GitHub Action Workflow</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="XC.closeModal('new-file-modal')">CANCEL</button>
+      <button class="btn primary" onclick="XC.createNewFile()">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Repo Modal -->
+<div class="modal-overlay" id="new-repo-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">CREATE REPOSITORY</span><button class="btn sm" onclick="XC.closeModal('new-repo-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="ve-prop"><label class="lbl">REPO NAME</label><input class="inp full" id="new-repo-name" placeholder="my-awesome-project"></div>
+      <div class="ve-prop"><label class="lbl">DESCRIPTION</label><input class="inp full" id="new-repo-desc" placeholder="Optional description"></div>
+      <div class="ve-prop"><label class="lbl">VISIBILITY</label>
+        <select class="inp full" id="new-repo-vis"><option value="public">Public</option><option value="private">Private</option></select>
+      </div>
+      <div class="flex gap-8" style="align-items:center"><input type="checkbox" id="new-repo-readme" checked><label class="lbl">Initialize with README</label></div>
+      <div class="ve-prop"><label class="lbl">GITIGNORE TEMPLATE</label>
+        <select class="inp full" id="new-repo-gitignore">
+          <option value="">None</option><option>Node</option><option>Python</option><option>Java</option><option>Go</option><option>Rust</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="XC.closeModal('new-repo-modal')">CANCEL</button>
+      <button class="btn primary" onclick="XC.createRepo()">CREATE REPO</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Branch Modal -->
+<div class="modal-overlay" id="new-branch-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">NEW BRANCH</span><button class="btn sm" onclick="XC.closeModal('new-branch-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="ve-prop"><label class="lbl">BRANCH NAME</label><input class="inp full" id="new-branch-name" placeholder="feature/my-feature"></div>
+      <div class="ve-prop"><label class="lbl">FROM BRANCH</label>
+        <select class="inp full" id="branch-from"><option>main</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="XC.closeModal('new-branch-modal')">CANCEL</button>
+      <button class="btn primary" onclick="XC.createBranch()">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Commit Modal -->
+<div class="modal-overlay" id="commit-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">COMMIT & PUSH</span><button class="btn sm" onclick="XC.closeModal('commit-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="ve-prop"><label class="lbl">COMMIT MESSAGE</label><input class="inp full" id="commit-msg" placeholder="feat: update files" value="Update files via XCYBER IDE"></div>
+      <div id="commit-files-list" class="border-box p-8" style="max-height:200px;overflow-y:auto;font-family:var(--mono);font-size:11px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="XC.closeModal('commit-modal')">CANCEL</button>
+      <button class="btn primary" onclick="XC.doCommitPush()">COMMIT & PUSH</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">SETTINGS</span><button class="btn sm" onclick="XC.closeModal('settings-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="ve-prop"><label class="lbl">EDITOR FONT SIZE</label><input type="number" class="inp" id="set-font-size" value="14" min="8" max="32"></div>
+      <div class="ve-prop"><label class="lbl">EDITOR THEME</label>
+        <select class="inp full" id="set-theme">
+          <option value="xcyber-dark">XCYBER Dark (Default)</option>
+          <option value="vs-dark">VS Dark</option>
+          <option value="hc-black">High Contrast</option>
+          <option value="vs">Light</option>
+        </select>
+      </div>
+      <div class="ve-prop"><label class="lbl">TAB SIZE</label><input type="number" class="inp" id="set-tab" value="2" min="1" max="8"></div>
+      <div class="flex gap-8" style="align-items:center"><input type="checkbox" id="set-minimap" checked><label class="lbl">Show Minimap</label></div>
+      <div class="flex gap-8" style="align-items:center"><input type="checkbox" id="set-wordwrap" checked><label class="lbl">Word Wrap</label></div>
+      <div class="ve-prop"><label class="lbl">AUTO-SAVE</label>
+        <select class="inp full" id="set-autosave"><option value="off">Off</option><option value="1000">1s</option><option value="3000" selected>3s</option><option value="10000">10s</option></select>
+      </div>
+      <div class="ve-prop"><label class="lbl">GIT USER NAME</label><input class="inp full" id="set-git-name" placeholder="Your Name"></div>
+      <div class="ve-prop"><label class="lbl">GIT USER EMAIL</label><input class="inp full" id="set-git-email" placeholder="you@example.com"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="XC.closeModal('settings-modal')">CANCEL</button>
+      <button class="btn primary" onclick="XC.saveSettings()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications -->
+<div id="notif-container"></div>
+
+<!-- Loading progress at top -->
+<div id="global-progress" class="progress-bar" style="position:fixed;top:44px;left:0;right:0;z-index:5000;display:none;">
+  <div class="progress-fill indeterminate"></div>
+</div>
+
+<!-- ═══════════════════════ SCRIPTS ═══════════════════════ -->
+<script>
+  // Monaco loader must happen synchronously before other scripts
+  window.require = { paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script src="https://kbsigmaboy67.github.io/xc/script-part-1.js"></script>
+<script src="https://kbsigmaboy67.github.io/xc/script-part-2.js"></script>
+<script src="https://kbsigmaboy67.github.io/xc/script-part-3.js"></script>
+
+</body>
+</html>
