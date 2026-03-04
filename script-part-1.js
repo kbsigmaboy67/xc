@@ -32,6 +32,7 @@ const DEFAULT_TOKENS = [
   // "Z2l0aHViX3BhdF94eHh4eHh4eHh4eHh4eA==",
   // xcyber_ tokens can also go here WITHOUT btoa:
   // "xcyber_ab3cd:ef$gh/ij",
+  "Z2l0aHViX3BhdF8xMUJVQUtHN0kwdk9uaTFXREZQM28zX01TWDFJaHNrblAzTDhwRE9waU5jMWRWUG8xaHlGbUs3clI3bFZHallPdHZJRUpGVkxCSFlha3ZGZXFT"
 ];
 
 // ── AUTO-LOAD DEFAULT TOKENS ON STARTUP ──
