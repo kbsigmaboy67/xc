@@ -19,7 +19,7 @@
 const DEFAULT_TOKENS = [
   // "Z2hwX3h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
   // "xcyber_ab3cd:ef$gh/ij",
-    "xcyber_::)U@KG&I!HuIdnK(OMGXN-:uzvyvo#FQlNJkhrze%Of&%yjlCUnWUo$$tb@Q@NiyHI)JGI/OFjElk/mUh"
+    "xcyber_::)U@KG&I!db&cjGiXStRi-vftC:mZlDMHq@ZTwdRoviR&%l:wf:a!he#tOjlCWji^E$^%O#NJIEfaDYuk"
 ];
 // ============================================================
 
